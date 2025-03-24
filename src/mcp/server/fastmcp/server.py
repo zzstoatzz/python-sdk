@@ -30,7 +30,7 @@ from mcp.server.fastmcp.tools import ToolManager
 from mcp.server.fastmcp.utilities.logging import configure_logging, get_logger
 from mcp.server.fastmcp.utilities.types import Image
 from mcp.server.lowlevel.helper_types import ReadResourceContents
-from mcp.server.lowlevel.server import LifespanResultT
+from mcp.server.lowlevel.server import LifespanResultT, ServerStartupHook
 from mcp.server.lowlevel.server import Server as MCPServer
 from mcp.server.lowlevel.server import lifespan as default_lifespan
 from mcp.server.session import ServerSession, ServerSessionT
@@ -109,16 +109,23 @@ def lifespan_wrapper(
 
 class FastMCP:
     def __init__(
-        self, name: str | None = None, instructions: str | None = None, **settings: Any
+        self,
+        name: str | None = None,
+        instructions: str | None = None,
+        startup_hooks: Sequence[ServerStartupHook[LifespanResultT]] | None = None,
+        **settings: Any,
     ):
         self.settings = Settings(**settings)
 
         self._mcp_server = MCPServer(
             name=name or "FastMCP",
             instructions=instructions,
-            lifespan=lifespan_wrapper(self, self.settings.lifespan)
-            if self.settings.lifespan
-            else default_lifespan,
+            lifespan=(
+                lifespan_wrapper(self, self.settings.lifespan)
+                if self.settings.lifespan
+                else default_lifespan
+            ),
+            startup_hooks=startup_hooks,
         )
         self._tool_manager = ToolManager(
             warn_on_duplicate_tools=self.settings.warn_on_duplicate_tools
@@ -652,9 +659,9 @@ class Context(BaseModel, Generic[ServerSessionT, LifespanContextT]):
         Returns:
             The resource content as either text or bytes
         """
-        assert self._fastmcp is not None, (
-            "Context is not available outside of a request"
-        )
+        assert (
+            self._fastmcp is not None
+        ), "Context is not available outside of a request"
         return await self._fastmcp.read_resource(uri)
 
     async def log(

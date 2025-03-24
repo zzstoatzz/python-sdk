@@ -26,10 +26,12 @@ def configure_logging(
     """
     handlers: list[logging.Handler] = []
     try:
-        from rich.console import Console
-        from rich.logging import RichHandler
+        from rich.console import Console  # pyright: ignore
+        from rich.logging import RichHandler  # pyright: ignore
 
-        handlers.append(RichHandler(console=Console(stderr=True), rich_tracebacks=True))
+        handlers.append(
+            RichHandler(console=Console(stderr=True), rich_tracebacks=True)  # pyright: ignore
+        )
     except ImportError:
         pass
 

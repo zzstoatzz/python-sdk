@@ -9,9 +9,8 @@ from typing import Any
 import anyio
 import anyio.to_thread
 import httpx
-import pydantic.json
 import pydantic_core
-from pydantic import Field, ValidationInfo
+from pydantic import Field, ValidationInfo, field_validator
 
 from mcp.server.fastmcp.resources.base import Resource
 
@@ -88,7 +87,7 @@ class FileResource(Resource):
         description="MIME type of the resource content",
     )
 
-    @pydantic.field_validator("path")
+    @field_validator("path")
     @classmethod
     def validate_absolute_path(cls, path: Path) -> Path:
         """Ensure path is absolute."""
@@ -96,7 +95,7 @@ class FileResource(Resource):
             raise ValueError("Path must be absolute")
         return path
 
-    @pydantic.field_validator("is_binary")
+    @field_validator("is_binary")
     @classmethod
     def set_binary_from_mime_type(cls, is_binary: bool, info: ValidationInfo) -> bool:
         """Set is_binary based on mime_type if not explicitly set."""
@@ -145,7 +144,7 @@ class DirectoryResource(Resource):
         default="application/json", description="MIME type of the resource content"
     )
 
-    @pydantic.field_validator("path")
+    @field_validator("path")
     @classmethod
     def validate_absolute_path(cls, path: Path) -> Path:
         """Ensure path is absolute."""

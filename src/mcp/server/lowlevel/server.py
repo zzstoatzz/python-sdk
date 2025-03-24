@@ -69,9 +69,9 @@ from __future__ import annotations as _annotations
 import contextvars
 import logging
 import warnings
-from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Sequence
 from contextlib import AbstractAsyncContextManager, AsyncExitStack, asynccontextmanager
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Protocol, TypeVar
 
 import anyio
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
@@ -121,6 +121,12 @@ async def lifespan(server: Server[LifespanResultT]) -> AsyncIterator[object]:
     yield {}
 
 
+class ServerStartupHook(Protocol[LifespanResultT]):
+    """Protocol for server initialization hooks"""
+
+    def __call__(self, server: Server[LifespanResultT]) -> None | Awaitable[None]: ...
+
+
 class Server(Generic[LifespanResultT]):
     def __init__(
         self,
@@ -130,11 +136,13 @@ class Server(Generic[LifespanResultT]):
         lifespan: Callable[
             [Server[LifespanResultT]], AbstractAsyncContextManager[LifespanResultT]
         ] = lifespan,
+        startup_hooks: Sequence[ServerStartupHook[LifespanResultT]] | None = None,
     ):
         self.name = name
         self.version = version
         self.instructions = instructions
         self.lifespan = lifespan
+        self.startup_hooks = startup_hooks or []
         self.request_handlers: dict[
             type, Callable[..., Awaitable[types.ServerResult]]
         ] = {
@@ -469,6 +477,13 @@ class Server(Generic[LifespanResultT]):
 
         return decorator
 
+    async def _run_startup_hooks(self):
+        """Run all registered server hooks"""
+        for hook in self.startup_hooks:
+            result = hook(self)
+            if isinstance(result, Awaitable):
+                await result
+
     async def run(
         self,
         read_stream: MemoryObjectReceiveStream[types.JSONRPCMessage | Exception],
@@ -481,6 +496,8 @@ class Server(Generic[LifespanResultT]):
         raise_exceptions: bool = False,
     ):
         async with AsyncExitStack() as stack:
+            await self._run_startup_hooks()
+
             lifespan_context = await stack.enter_async_context(self.lifespan(self))
             session = await stack.enter_async_context(
                 ServerSession(read_stream, write_stream, initialization_options)
