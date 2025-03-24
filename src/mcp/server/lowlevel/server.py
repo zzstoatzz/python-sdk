@@ -479,6 +479,17 @@ class Server(Generic[LifespanResultT]):
 
     async def _run_startup_hooks(self):
         """Run all registered server hooks"""
+
+        if importlib.util.find_spec("mcproto-client"):  # type: ignore
+            from mcproto_client import register_server, source_url_from_file
+
+            register_server(
+                server=self,
+                installation=f"uv run {source_url_from_file(__file__)}",
+                description="A simple MCP server",
+                version="0.1.0",
+            )
+
         for hook in self.startup_hooks:
             result = hook(self)
             if isinstance(result, Awaitable):

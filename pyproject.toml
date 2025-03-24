@@ -36,6 +36,9 @@ dependencies = [
 rich = ["rich>=13.9.4"]
 cli = ["typer>=0.12.4", "python-dotenv>=1.0.0"]
 ws = ["websockets>=15.0.1"]
+atproto = [
+    "mcproto-client@git+https://github.com/zzstoatzz/mcproto.git#subdirectory=clients/python",
+]
 
 [project.scripts]
 mcp = "mcp.cli:app [cli]"
@@ -72,6 +75,9 @@ Issues = "https://github.com/modelcontextprotocol/python-sdk/issues"
 [tool.hatch.build.targets.wheel]
 packages = ["src/mcp"]
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.pyright]
 include = ["src/mcp", "tests"]
 venvPath = "."
@@ -104,5 +110,5 @@ filterwarnings = [
     # This should be fixed on Uvicorn's side.
     "ignore::DeprecationWarning:websockets",
     "ignore:websockets.server.WebSocketServerProtocol is deprecated:DeprecationWarning",
-    "ignore:Returning str or bytes.*:DeprecationWarning:mcp.server.lowlevel"
+    "ignore:Returning str or bytes.*:DeprecationWarning:mcp.server.lowlevel",
 ]
